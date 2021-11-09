@@ -2,6 +2,8 @@ import path from "path";
 
 import fs from "fs";
 
+import lessPluginGlob from "less-plugin-glob";
+
 import CustomImportPlugin from "./fixtures/folder/customImportPlugin";
 import CustomFileLoaderPlugin from "./fixtures/folder/customFileLoaderPlugin";
 
@@ -874,6 +876,64 @@ describe("loader", () => {
 
     expect(codeFromBundle.css).toBe(codeFromLess.css);
     expect(codeFromBundle.css).toMatchSnapshot("css");
+    expect(getWarnings(stats)).toMatchSnapshot("warnings");
+    expect(getErrors(stats)).toMatchSnapshot("errors");
+  });
+
+  it("should import from glob expressions", async () => {
+    const testId = "./glob.less";
+    const compiler = getCompiler(testId, {
+      lessOptions: {
+        plugins: [lessPluginGlob],
+      },
+    });
+    const stats = await compile(compiler);
+    const codeFromBundle = getCodeFromBundle(stats, compiler);
+    const codeFromLess = await getCodeFromLess(testId, {
+      lessOptions: {
+        plugins: [lessPluginGlob],
+      },
+    });
+
+    expect(codeFromBundle.css).toBe(codeFromLess.css);
+    expect(codeFromBundle.css).toMatchSnapshot("css");
+    expect(getWarnings(stats)).toMatchSnapshot("warnings");
+    expect(getErrors(stats)).toMatchSnapshot("errors");
+  });
+
+  it("should emit an error", async () => {
+    const testId = "./error.less";
+    const compiler = getCompiler(testId);
+    const stats = await compile(compiler);
+
+    expect(getWarnings(stats)).toMatchSnapshot("warnings");
+    expect(getErrors(stats)).toMatchSnapshot("errors");
+  });
+
+  it("should work and logging", async () => {
+    const testId = "./logging.less";
+    const compiler = getCompiler(testId);
+    const stats = await compile(compiler);
+    const codeFromBundle = getCodeFromBundle(stats, compiler);
+    const codeFromLess = await getCodeFromLess(testId);
+    const logs = [];
+
+    for (const [name, value] of stats.compilation.logging) {
+      if (/less-loader/.test(name)) {
+        logs.push(
+          value.map((item) => {
+            return {
+              type: item.type,
+              args: item.args,
+            };
+          })
+        );
+      }
+    }
+
+    expect(codeFromBundle.css).toBe(codeFromLess.css);
+    expect(codeFromBundle.css).toMatchSnapshot("css");
+    expect(logs).toMatchSnapshot("logs");
     expect(getWarnings(stats)).toMatchSnapshot("warnings");
     expect(getErrors(stats)).toMatchSnapshot("errors");
   });
